@@ -1430,6 +1430,7 @@ class PageObject(DictionaryObject):
         _space_width: float = 500.0  # will be set correctly at first Tf
         TL = 0.0
         font_size = 12.0  # init just in case of
+        add_newline = False
 
         def mult(m: List[float], n: List[float]) -> List[float]:
             return [
@@ -1458,6 +1459,7 @@ class PageObject(DictionaryObject):
             nonlocal cm_matrix, cm_stack, tm_matrix, tm_prev, output, text
             nonlocal char_scale, space_scale, _space_width, TL, font_size, cmap
             nonlocal orientations, rtl_dir, visitor_text
+            nonlocal add_newline
             global CUSTOM_RTL_MIN, CUSTOM_RTL_MAX, CUSTOM_RTL_SPECIAL_CHARS
 
             check_crlf_space: bool = False
@@ -1469,7 +1471,13 @@ class PageObject(DictionaryObject):
                     visitor_text(text, cm_matrix, tm_matrix, cmap[3], font_size)
                 text = ""
                 return None
+            elif operator == b"m":
+                add_newline = True
             elif operator == b"ET":
+                if add_newline:
+                    if output and output[-1] != "\n":
+                        output += "\n"
+                    add_newline = False
                 output += text
                 if visitor_text is not None:
                     visitor_text(text, cm_matrix, tm_matrix, cmap[3], font_size)
@@ -1526,6 +1534,10 @@ class PageObject(DictionaryObject):
                 TL = float(operands[0])
             elif operator == b"Tf":
                 if text != "":
+                    if add_newline:
+                        if output and output[-1] != "\n":
+                            output += "\n"
+                        add_newline = False
                     output += text  # .translate(cmap)
                     if visitor_text is not None:
                         visitor_text(text, cm_matrix, tm_matrix, cmap[3], font_size)
